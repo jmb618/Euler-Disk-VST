@@ -1,0 +1,38 @@
+yaml
+name: Build macOS VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Faust
+        run: |
+          brew install faust
+          faust --version
+          faust --includedir
+
+      - name: Configurer
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+
+      - name: Compiler
+        run: cmake --build build --config Release -j 4
+
+      - name: Signature ad-hoc
+        run: codesign --force --deep -s - "build/EulerDisk_artefacts/Release/VST3/Euler Disk.vst3"
+
+      - name: Empaqueter
+        run: |
+          cd build/EulerDisk_artefacts/Release/VST3
+          ditto -c -k --keepParent "Euler Disk.vst3" "$GITHUB_WORKSPACE/EulerDisk-macOS-VST3.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EulerDisk-macOS-VST3
+          path: EulerDisk-macOS-VST3.zip
